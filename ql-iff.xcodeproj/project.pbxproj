@@ -24,7 +24,7 @@
 		635477DF16F127490032D294 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = /Users/david/Library/QuickLook/;
+			dstPath = "~/Library/QuickLook/";
 			dstSubfolderSpec = 0;
 			files = (
 				635477E116F127580032D294 /* iff.qlgenerator in CopyFiles */,
