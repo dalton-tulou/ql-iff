@@ -43,13 +43,6 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	
 	int width2 = (width+1)&-2;
 	
-	CGContextRef context = QLThumbnailRequestCreateContext(thumbnail, CGSizeMake(width, height), false, NULL);
-    
-	if (!context)
-	{
-		return noErr;
-	}
-    
 	UInt8 *chunky = malloc(width*height);
 	UInt32 *palette = malloc(256*4);
 	UInt32 *picture = malloc(4*width*height);
@@ -81,7 +74,7 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	CGContextRef bitmapContext =
     CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
     
-	if (!context)
+	if (!bitmapContext)
 	{
 		return noErr;
 	}
@@ -90,6 +83,25 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	
 	CGImageRef image = CGBitmapContextCreateImage(bitmapContext);
     
+    if (width > maxSize.width)
+    {
+        height = height*maxSize.width/width;
+        width = maxSize.width;
+    }
+    
+    if (height > maxSize.height)
+    {
+        width = width*maxSize.height/height;
+        height = maxSize.height;
+    }
+
+    CGContextRef context = QLThumbnailRequestCreateContext(thumbnail, CGSizeMake(width, height), false, NULL);
+    
+	if (!context)
+	{
+		return noErr;
+	}
+
 	CGContextDrawImage(context, CGRectMake(0, 0, width-1, height-1), image);
     
 	CFRelease(bitmapContext);
