@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		635477E116F127580032D294 /* iff.qlgenerator in CopyFiles */ = {isa = PBXBuildFile; fileRef = 639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */; };
 		639C91D816F0E8D0008C3BF1 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91D716F0E8D0008C3BF1 /* QuickLook.framework */; };
 		639C91DA16F0E8D0008C3BF1 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91D916F0E8D0008C3BF1 /* ApplicationServices.framework */; };
 		639C91DC16F0E8D0008C3BF1 /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91DB16F0E8D0008C3BF1 /* CoreServices.framework */; };
@@ -15,10 +16,25 @@
 		639C91E616F0E8D0008C3BF1 /* GenerateThumbnailForURL.c in Sources */ = {isa = PBXBuildFile; fileRef = 639C91E516F0E8D0008C3BF1 /* GenerateThumbnailForURL.c */; };
 		639C91E816F0E8D0008C3BF1 /* GeneratePreviewForURL.c in Sources */ = {isa = PBXBuildFile; fileRef = 639C91E716F0E8D0008C3BF1 /* GeneratePreviewForURL.c */; };
 		639C91EA16F0E8D0008C3BF1 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 639C91E916F0E8D0008C3BF1 /* main.c */; };
+		63BF78D516F115A4008D1D69 /* iff.c in Sources */ = {isa = PBXBuildFile; fileRef = 63BF78D316F115A4008D1D69 /* iff.c */; };
+		63BF78D616F115A4008D1D69 /* iff.h in Headers */ = {isa = PBXBuildFile; fileRef = 63BF78D416F115A4008D1D69 /* iff.h */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		635477DF16F127490032D294 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /Users/david/Library/QuickLook/;
+			dstSubfolderSpec = 0;
+			files = (
+				635477E116F127580032D294 /* iff.qlgenerator in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		639C91D416F0E8D0008C3BF1 /* ql-iff.qlgenerator */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ql-iff.qlgenerator"; sourceTree = BUILT_PRODUCTS_DIR; };
+		639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iff.qlgenerator; sourceTree = BUILT_PRODUCTS_DIR; };
 		639C91D716F0E8D0008C3BF1 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		639C91D916F0E8D0008C3BF1 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		639C91DB16F0E8D0008C3BF1 /* CoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreServices.framework; path = System/Library/Frameworks/CoreServices.framework; sourceTree = SDKROOT; };
@@ -29,6 +45,8 @@
 		639C91E716F0E8D0008C3BF1 /* GeneratePreviewForURL.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = GeneratePreviewForURL.c; sourceTree = "<group>"; };
 		639C91E916F0E8D0008C3BF1 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		639C91EB16F0E8D0008C3BF1 /* ql-iff-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ql-iff-Prefix.pch"; sourceTree = "<group>"; };
+		63BF78D316F115A4008D1D69 /* iff.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = iff.c; path = ../iff.c; sourceTree = "<group>"; };
+		63BF78D416F115A4008D1D69 /* iff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = iff.h; path = ../iff.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,7 +76,7 @@
 		639C91D516F0E8D0008C3BF1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				639C91D416F0E8D0008C3BF1 /* ql-iff.qlgenerator */,
+				639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -77,6 +95,8 @@
 		639C91DF16F0E8D0008C3BF1 /* ql-iff */ = {
 			isa = PBXGroup;
 			children = (
+				63BF78D316F115A4008D1D69 /* iff.c */,
+				63BF78D416F115A4008D1D69 /* iff.h */,
 				639C91E516F0E8D0008C3BF1 /* GenerateThumbnailForURL.c */,
 				639C91E716F0E8D0008C3BF1 /* GeneratePreviewForURL.c */,
 				639C91E916F0E8D0008C3BF1 /* main.c */,
@@ -102,6 +122,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				63BF78D616F115A4008D1D69 /* iff.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +138,7 @@
 				639C91D016F0E8D0008C3BF1 /* Headers */,
 				639C91D116F0E8D0008C3BF1 /* Resources */,
 				639C91D216F0E8D0008C3BF1 /* Rez */,
+				635477DF16F127490032D294 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -124,7 +146,7 @@
 			);
 			name = "ql-iff";
 			productName = "ql-iff";
-			productReference = 639C91D416F0E8D0008C3BF1 /* ql-iff.qlgenerator */;
+			productReference = 639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -182,6 +204,7 @@
 				639C91E616F0E8D0008C3BF1 /* GenerateThumbnailForURL.c in Sources */,
 				639C91E816F0E8D0008C3BF1 /* GeneratePreviewForURL.c in Sources */,
 				639C91EA16F0E8D0008C3BF1 /* main.c in Sources */,
+				63BF78D516F115A4008D1D69 /* iff.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,7 +279,7 @@
 				GCC_PREFIX_HEADER = "ql-iff/ql-iff-Prefix.pch";
 				INFOPLIST_FILE = "ql-iff/ql-iff-Info.plist";
 				INSTALL_PATH = /Library/QuickLook;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = iff;
 				WRAPPER_EXTENSION = qlgenerator;
 			};
 			name = Debug;
@@ -269,7 +292,7 @@
 				GCC_PREFIX_HEADER = "ql-iff/ql-iff-Prefix.pch";
 				INFOPLIST_FILE = "ql-iff/ql-iff-Info.plist";
 				INSTALL_PATH = /Library/QuickLook;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = iff;
 				WRAPPER_EXTENSION = qlgenerator;
 			};
 			name = Release;
@@ -293,6 +316,7 @@
 				639C91F016F0E8D0008C3BF1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

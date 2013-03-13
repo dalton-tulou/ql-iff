@@ -78,14 +78,8 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 		return noErr;
 	}
 	
-	CGContextRef bitmapContext = CGBitmapContextCreate(
-                                                       picture,
-                                                       width,
-                                                       height,
-                                                       8,
-                                                       4*width2,
-                                                       colorSpace,
-                                                       kCGImageAlphaNoneSkipFirst);
+	CGContextRef bitmapContext =
+        CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
     
 	if (!context)
 	{
