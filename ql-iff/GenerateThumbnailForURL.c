@@ -39,19 +39,28 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
         return noErr;
     }
     
-	if (!ckmap.bmhd || !ckmap.cmap || !ckmap.body)
-	{
-		return noErr;
-	}
-	
-	int width = bmhd_getWidth(ckmap.bmhd);
-	int height = bmhd_getHeight(ckmap.bmhd);
-	
+    int width=0, height=0;
+    
+    if (ckmap.bmhd && ckmap.body && ckmap.cmap)
+    {
+        width = bmhd_getWidth(ckmap.bmhd);
+        height = bmhd_getHeight(ckmap.bmhd);
+    }
+    else if (ckmap.cmap)
+    {
+        width = maxSize.width;
+        height = maxSize.height;
+    }
+    else
+    {
+        return noErr;
+    }
+    
 	int width2 = (width+1)&-2;
 	
 	UInt32 *picture = malloc(4*width*height);
 
-    error = ilbm_render(&ckmap, picture);
+    error = ilbm_render(&ckmap, picture, width, height);
     
 	/*{
      int numColors = 1 << bmhd_getDepth(ckmap.bmhd);

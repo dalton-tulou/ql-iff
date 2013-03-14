@@ -124,7 +124,7 @@ int cmap_unpack(chunkMap_t *ckmap, UInt32 *dest)
 	
 	if (!cmap)
 	{
-		return 1;
+		return -1;
 	}
 	
 	int numColors = header_getSize(&cmap->header) / 3;
@@ -140,69 +140,9 @@ int cmap_unpack(chunkMap_t *ckmap, UInt32 *dest)
 		palette[i][3] = *src++;
 	}
 	
-	return 0;
+	return numColors;
 }
 
-/*
-
- ilbm_body
- 
- tst.l	a1	; write bitmap?
- beq.b	.skip
- 
- movea.l	a0,a4	; src pointer
- 
- move.w	bmhd_width(a3),d2	; width in pixels
- move.w	bmhd_height(a3),d5	; rows
- 
- asr.w	#3,d2			; width in bytes
-.rows
- move.l	a1,-(sp)
- 
- move.b	bmhd_depth(a3),d4	; nr of bitplanes
-.planes
- lea	(a1,d2.w),a5	; a5 = row end
-.byte
- cmpa.l	a5,a1
- bge.b	.next
- 
- move.b	(a4)+,d3
- extb.l	d3
- 
- bpl.b	.copy
- 
- ; negative means rle
- 
- neg.l	d3
- 
- move.b	(a4)+,d0
-.rle	move.b	d0,(a1)+
- dbf	d3,.rle
- 
- bra.b	.byte
- 
- .copy	move.b	(a4)+,(a1)+
- dbf	d3,.copy
- 
- bra.b	.byte
- 
-.next	suba.w	d2,a1		; back to row start
- adda.l	d7,a1		; next bitplane
- 
- subq.b	#1,d4
- bgt.b	.planes
- 
- move.l	(sp)+,a1	; get dest pointer
- adda.l	d6,a1		; next dest row
- 
- subq.w	#1,d5
- bgt.b	.rows
-.skip
- adda.l	d1,a0
- rts
- 
- */
- 
 int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 {
 	bmhd_t *bmhd = ckmap->bmhd;
@@ -383,20 +323,99 @@ int iblm_makePicture(chunkMap_t *ckmap, UInt8 *chunky, UInt32 *palette, UInt32 *
 	return 0;
 }
 
-int ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
+int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
 {
-    int width = bmhd_getWidth(ckmap->bmhd);
-    int height = bmhd_getHeight(ckmap->bmhd);
+    if (ckmap->bmhd && ckmap->body && ckmap->cmap)
+    {
+        UInt8 *chunky = malloc(width*height);
+        UInt32 *palette = malloc(256*4);
+        
+        body_unpack(ckmap, chunky);
+        cmap_unpack(ckmap, palette);
+        iblm_makePicture(ckmap, chunky, palette, picture);
+        
+        free(chunky);
+        free(palette);
+        
+        return 0;
+    }
+    else if (ckmap->cmap)
+    {
+        UInt32 *palette = malloc(256*4);
+        int numColors = cmap_unpack(ckmap, palette);
+        
+        if (numColors <= 0)
+        {
+            return 1;
+        }
+        
+        int rows, cols;
+        
+        if (numColors <= 1)
+        {
+            rows = 1;
+            cols = 1;
+        }
+        else if (numColors <= 2)
+        {
+            rows = 1;
+            cols = 2;
+        }
+        else if (numColors <= 4)
+        {
+            rows = 2;
+            cols = 2;
+        }
+        else if (numColors <= 8)
+        {
+            rows = 2;
+            cols = 4;
+        }
+        else if (numColors <= 16)
+        {
+            rows = 4;
+            cols = 4;
+        }
+        else if (numColors <= 32)
+        {
+            rows = 4;
+            cols = 8;
+        }
+        else if (numColors <= 64)
+        {
+            rows = 8;
+            cols = 8;
+        }
+        else if (numColors <= 128)
+        {
+            rows = 8;
+            cols = 16;
+        }
+        else if (numColors <= 256)
+        {
+            rows = 16;
+            cols = 16;
+        }
+        else
+        {
+            return 1;
+        }
+        
+        {
+            for (int y=0; y<height; y++)
+            {
+                for (int x=0; x<width; x++)
+                {
+                    int i = cols*(y*rows/height) + (x*cols/width);
+                    picture[width*y+x] = palette[i];
+                }
+            }
+        }
+        
+        free(palette);
+
+        return 0;
+    }
     
-	UInt8 *chunky = malloc(width*height);
-	UInt32 *palette = malloc(256*4);
-	
-	body_unpack(ckmap, chunky);
-	cmap_unpack(ckmap, palette);
-	iblm_makePicture(ckmap, chunky, palette, picture);
-    
-    free(chunky);
-    free(palette);
-    
-    return 0;
+    return 1;
 }

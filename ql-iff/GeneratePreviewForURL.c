@@ -38,14 +38,23 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
     {
         return noErr;
     }
+
+    int width=0, height=0;
     
-	if (!ckmap.bmhd || !ckmap.cmap || !ckmap.body)
-	{
-		return noErr;
-	}
-	
-	int width = bmhd_getWidth(ckmap.bmhd);
-	int height = bmhd_getHeight(ckmap.bmhd);
+    if (ckmap.bmhd && ckmap.body && ckmap.cmap)
+    {
+        width = bmhd_getWidth(ckmap.bmhd);
+        height = bmhd_getHeight(ckmap.bmhd);
+    }
+    else if (ckmap.cmap)
+    {
+        width = 256;
+        height = 256;
+    }
+    else
+    {
+        return noErr;
+    }
 	
 	int width2 = (width+1)&-2;
 
@@ -56,7 +65,7 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
         return noErr;
     }
     
-    error = ilbm_render(&ckmap, picture);
+    error = ilbm_render(&ckmap, picture, width, height);
 
     if (error)
     {
