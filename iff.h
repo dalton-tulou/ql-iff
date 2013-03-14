@@ -81,3 +81,5 @@ int cmap_unpack(chunkMap_t *, UInt32 *);
 int iblm_makePicture(chunkMap_t *, UInt8 *chunky, UInt32 *palette, UInt32 *dest);
 int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int with, int height);
 
+CGImageRef iff_getImageRef(CFURLRef url);
+

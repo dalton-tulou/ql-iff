@@ -114,7 +114,7 @@ int iff_mapChunks(const UInt8 *bytePtr, long length, chunkMap_t *ckmap)
 		
 		header = header_getNext(header);
 	}
-	
+
 	return 0;
 }
 
@@ -215,6 +215,26 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 				}
 			}
 		}
+        
+        // lame c2p
+        
+		for (int y=0; y<height; y++)
+		{
+			for (int x=0; x<width; x++)
+			{
+				int c = 0;
+				
+				for (int z=depth-1; z>=0; z--)
+				{
+					int pos = (y*depth+z)*cols + (x>>3);
+					int bit = 7-(x & 7);
+					
+					c += c + ((planar[pos] >> bit) & 1);
+				}
+				
+				chunky[y*width+x] = c;
+			}
+		}
 	}
 	else if (type == 'PBM ')
 	{
@@ -246,7 +266,6 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 						}
 					}
 				}
-				//assert(dest == dataEnd);
 			}
 			else
 			{
@@ -254,48 +273,6 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 			}
 	}
 	
-	if (type == 'ILBM')
-	{
-		for (int y=0; y<height; y++)
-		{
-			for (int x=0; x<width; x++)
-			{
-				int c = 0;
-				
-				for (int z=depth-1; z>=0; z--)
-				{
-					int pos = (y*depth+z)*cols + (x>>3);
-					int bit = 7-(x & 7);
-					
-					c += c + ((planar[pos] >> bit) & 1);
-				}
-				
-				chunky[y*width+x] = c;
-			}
-		}
-	}
-	else if (type == 'PBM ')
-	{
-		/*for (int y=0; y<height; y++)
-		{
-			for (int x=0; x<width; x++)
-			{
-				int c = 0;
-				
-				for (int z=0; z<depth; z++)
-				{
-					int pos = (z*cols*height) + (y*cols) + (x>>3);
-					int bit = 7-(x & 7);
-					
-					c += c + ((planar[pos] >> bit) & 1);
-				}
-				
-				chunky[y*width+x] = c;
-			}
-		}*/
-		//memcpy(chunky, planar, width*height);
-	}
-
 	free(planar);
 	
 	return 0;
@@ -418,4 +395,83 @@ int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
     }
     
     return 1;
+}
+
+
+CGImageRef iff_getImageRef(CFURLRef url)
+{
+	CFDataRef data;
+	
+	int errorCode;
+	
+	Boolean success = CFURLCreateDataAndPropertiesFromResource(NULL, url, &data, NULL, NULL, &errorCode);
+	
+	if (!success)
+	{
+		return NULL;
+	}
+	
+	CFIndex length = CFDataGetLength(data);
+    const UInt8 *bytePtr = CFDataGetBytePtr(data);
+    
+	chunkMap_t ckmap;
+	
+	errorCode = iff_mapChunks(bytePtr, length, &ckmap);
+	
+    if (errorCode)
+    {
+        return NULL;
+    }
+    
+    int width, height;
+    
+    if (ckmap.bmhd && ckmap.body && ckmap.cmap)
+    {
+        width = bmhd_getWidth(ckmap.bmhd);
+        height = bmhd_getHeight(ckmap.bmhd);
+    }
+    else if (ckmap.cmap)
+    {
+        width = 256;
+        height = 256;
+    }
+    else
+    {
+        return NULL;
+    }
+    
+	int width2 = (width+1)&-2;
+	
+	UInt32 *picture = malloc(4*width*height);
+    
+    errorCode = ilbm_render(&ckmap, picture, width, height);
+    
+    if (errorCode)
+    {
+        return NULL;
+    }
+    
+	CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
+    
+	if (!colorSpace)
+	{
+		return NULL;
+	}
+	
+	CGContextRef bitmapContext =
+    CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
+    
+	if (!bitmapContext)
+	{
+		return NULL;
+	}
+	
+	CGColorSpaceRelease(colorSpace);
+	
+	CGImageRef image = CGBitmapContextCreateImage(bitmapContext);
+    
+    CFRelease(bitmapContext);
+	free(picture);
+
+    return image;
 }
