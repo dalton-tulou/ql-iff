@@ -66,14 +66,21 @@ int bmhd_getCompression(bmhd_t *bmhd)
 }
 
 
-int iff_mapChunks(form_t *form, chunkMap_t *ckmap)
+int iff_mapChunks(const UInt8 *bytePtr, long length, chunkMap_t *ckmap)
 {
 	memset(ckmap, 0, sizeof(*ckmap));
 
+    form_t *form = (form_t *)bytePtr;
+    
 	if (header_getID(&form->header) != 'FORM')
 	{
 		return 1;
 	}
+    
+    if (header_getSize(&form->header) + sizeof(form->header) > length)
+    {
+        return 1;
+    }
 	
 	if (form_getType(form) != 'ILBM' && form_getType(form) != 'PBM ')
 	{
@@ -374,4 +381,22 @@ int iblm_makePicture(chunkMap_t *ckmap, UInt8 *chunky, UInt32 *palette, UInt32 *
 	}
 	
 	return 0;
+}
+
+int ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
+{
+    int width = bmhd_getWidth(ckmap->bmhd);
+    int height = bmhd_getHeight(ckmap->bmhd);
+    
+	UInt8 *chunky = malloc(width*height);
+	UInt32 *palette = malloc(256*4);
+	
+	body_unpack(ckmap, chunky);
+	cmap_unpack(ckmap, palette);
+	iblm_makePicture(ckmap, chunky, palette, picture);
+    
+    free(chunky);
+    free(palette);
+    
+    return 0;
 }

@@ -74,8 +74,10 @@ int bmhd_getHeight(bmhd_t *bmhd);
 int bmhd_getDepth(bmhd_t *bmhd);
 int bmhd_getCompression(bmhd_t *bmhd);
 
-int iff_mapChunks(form_t *, chunkMap_t *);
+int iff_mapChunks(const UInt8 *, long, chunkMap_t *);
 int body_unpack(chunkMap_t *, UInt8 *);
 int cmap_unpack(chunkMap_t *, UInt32 *);
 
 int iblm_makePicture(chunkMap_t *, UInt8 *chunky, UInt32 *palette, UInt32 *dest);
+int ilbm_render(chunkMap_t *ckmap, UInt32 *picture);
+

@@ -26,13 +26,19 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 	}
 	
 	CFIndex length = CFDataGetLength(data);
+    const UInt8 *bytePtr = CFDataGetBytePtr(data);
     
-	form_t *form = (void *)CFDataGetBytePtr(data);
-	
 	chunkMap_t ckmap;
+
+    int error;
+
+	error = iff_mapChunks(bytePtr, length, &ckmap);
 	
-	iff_mapChunks(form, &ckmap);
-	
+    if (error)
+    {
+        return noErr;
+    }
+    
 	if (!ckmap.bmhd || !ckmap.cmap || !ckmap.body)
 	{
 		return noErr;
@@ -42,22 +48,21 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 	int height = bmhd_getHeight(ckmap.bmhd);
 	
 	int width2 = (width+1)&-2;
-	
-	CGContextRef context = QLPreviewRequestCreateContext(preview, CGSizeMake(width, height), false, NULL);
+
+    UInt32 *picture = malloc(sizeof(UInt32)*width*height);
+
+    if (!picture)
+    {
+        return noErr;
+    }
     
-	if (!context)
-	{
-		return noErr;
-	}
-    
-	UInt8 *chunky = malloc(width*height);
-	UInt32 *palette = malloc(256*4);
-	UInt32 *picture = malloc(4*width*height);
-	
-	body_unpack(&ckmap, chunky);
-	cmap_unpack(&ckmap, palette);
-	iblm_makePicture(&ckmap, chunky, palette, picture);
-    
+    error = ilbm_render(&ckmap, picture);
+
+    if (error)
+    {
+        return noErr;
+    }
+
 	/*{
      int numColors = 1 << bmhd_getDepth(ckmap.bmhd);
      
@@ -81,7 +86,7 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 	CGContextRef bitmapContext =
         CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
     
-	if (!context)
+	if (!bitmapContext)
 	{
 		return noErr;
 	}
@@ -89,16 +94,21 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 	CGColorSpaceRelease(colorSpace);
 	
 	CGImageRef image = CGBitmapContextCreateImage(bitmapContext);
+
+    CFRelease(bitmapContext);
+
+	CGContextRef context = QLPreviewRequestCreateContext(preview, CGSizeMake(width, height), false, NULL);
     
-	CGContextDrawImage(context, CGRectMake(0, 0, width-1, height-1), image);
+	if (!context)
+	{
+		return noErr;
+	}
     
-	CFRelease(bitmapContext);
+	CGContextDrawImage(context, CGRectMake(0, 0, width-1, height-1), image);    
     
 	QLPreviewRequestFlushContext(preview, context);
 	CFRelease(context);
     
-	free(chunky);
-	free(palette);
 	free(picture);
     
     return noErr;

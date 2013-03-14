@@ -26,13 +26,19 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	}
 	
 	CFIndex length = CFDataGetLength(data);
+    const UInt8 *bytePtr = CFDataGetBytePtr(data);
     
-	form_t *form = (void *)CFDataGetBytePtr(data);
-	
 	chunkMap_t ckmap;
 	
-	iff_mapChunks(form, &ckmap);
+    int error;
+    
+	error = iff_mapChunks(bytePtr, length, &ckmap);
 	
+    if (error)
+    {
+        return noErr;
+    }
+    
 	if (!ckmap.bmhd || !ckmap.cmap || !ckmap.body)
 	{
 		return noErr;
@@ -43,13 +49,9 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	
 	int width2 = (width+1)&-2;
 	
-	UInt8 *chunky = malloc(width*height);
-	UInt32 *palette = malloc(256*4);
 	UInt32 *picture = malloc(4*width*height);
-	
-	body_unpack(&ckmap, chunky);
-	cmap_unpack(&ckmap, palette);
-	iblm_makePicture(&ckmap, chunky, palette, picture);
+
+    error = ilbm_render(&ckmap, picture);
     
 	/*{
      int numColors = 1 << bmhd_getDepth(ckmap.bmhd);
@@ -109,8 +111,6 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 	QLThumbnailRequestFlushContext(thumbnail, context);
 	CFRelease(context);
     
-	free(chunky);
-	free(palette);
 	free(picture);
     
     return noErr;
