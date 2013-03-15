@@ -16,39 +16,10 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 {
     CGImageRef image = iff_createImage(url);
     
-    if (!image)
+    if (image)
     {
-        return noErr;
+        QLThumbnailRequestSetImage(thumbnail, image, NULL);
     }
-    
-    size_t width = CGImageGetWidth(image);
-    size_t height = CGImageGetHeight(image);
-    
-    if (width > maxSize.width)
-    {
-        height = height*maxSize.width/width;
-        width = maxSize.width;
-    }
-    
-    if (height > maxSize.height)
-    {
-        width = width*maxSize.height/height;
-        height = maxSize.height;
-    }
-
-    CGContextRef context = QLThumbnailRequestCreateContext(thumbnail, CGSizeMake(width, height), false, NULL);
-    
-	if (!context)
-	{
-		return noErr;
-	}
-
-	CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
-
-    CGImageRelease(image);
-    
-	QLThumbnailRequestFlushContext(thumbnail, context);
-	CFRelease(context);
     
     return noErr;
 }
