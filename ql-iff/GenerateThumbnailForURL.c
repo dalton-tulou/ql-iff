@@ -14,7 +14,7 @@ void CancelThumbnailGeneration(void *thisInterface, QLThumbnailRequestRef thumbn
 
 OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thumbnail, CFURLRef url, CFStringRef contentTypeUTI, CFDictionaryRef options, CGSize maxSize)
 {
-    CGImageRef image = iff_getImageRef(url);
+    CGImageRef image = iff_createImage(url);
     
     if (!image)
     {
@@ -43,7 +43,9 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
 		return noErr;
 	}
 
-	CGContextDrawImage(context, CGRectMake(0, 0, width-1, height-1), image);
+	CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
+
+    CGImageRelease(image);
     
 	QLThumbnailRequestFlushContext(thumbnail, context);
 	CFRelease(context);

@@ -8,10 +8,10 @@
  */
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <CoreFoundation/CFByteOrder.h>
 #include <CoreServices/CoreServices.h>
 #include <QuickLook/QuickLook.h>
 
+#include <CoreFoundation/CFUtilities.h>
 #include <CoreFoundation/CFByteOrder.h>
 #include "iff.h"
 
@@ -150,14 +150,14 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 	
 	if (!bmhd || !body)
 	{
-		return 1;
+		return -1;
 	}
 
 	int comp = bmhd_getCompression(bmhd);
 	
 	if (comp != 0 && comp != 1)
 	{
-		return 1;
+		return -1;
 	}
 
 	int height = bmhd_getHeight(bmhd);
@@ -278,127 +278,85 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 	return 0;
 }
 
-int iblm_makePicture(chunkMap_t *ckmap, UInt8 *chunky, UInt32 *palette, UInt32 *dest)
-{
-	bmhd_t *bmhd = ckmap->bmhd;
-	
-	if (!bmhd)
-	{
-		return 1;
-	}
-	
-	int height = bmhd_getHeight(bmhd);
-	int width = bmhd_getWidth(bmhd);
-
-	UInt8 *src = chunky;
-	
-	for (int i=0; i<width*height; i++)
-	{
-		*dest++ = palette[*src++];
-	}
-	
-	return 0;
-}
-
 int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
 {
     if (ckmap->bmhd && ckmap->body && ckmap->cmap)
     {
         UInt8 *chunky = malloc(width*height);
+
+        if (!chunky)
+        {
+            return -1;
+        }
+        
+        if (body_unpack(ckmap, chunky) < 0)
+        {
+            free(chunky);
+            return -1;
+        }
+        
         UInt32 *palette = malloc(256*4);
         
-        body_unpack(ckmap, chunky);
-        cmap_unpack(ckmap, palette);
-        iblm_makePicture(ckmap, chunky, palette, picture);
+        if (!palette)
+        {
+            free(chunky);
+            return -1;
+        }
+        
+        if (cmap_unpack(ckmap, palette) < 0)
+        {
+            free(chunky);
+            free(palette);
+            return -1;
+        }
+            
+        for (int i=0; i<width*height; i++)
+        {
+            picture[i] = palette[chunky[i]];
+        }
         
         free(chunky);
         free(palette);
-        
-        return 0;
     }
     else if (ckmap->cmap)
     {
         UInt32 *palette = malloc(256*4);
+
+        if (!palette)
+        {
+            return -1;
+        }
+        
         int numColors = cmap_unpack(ckmap, palette);
         
-        if (numColors <= 0)
+        if (numColors <= 0 || numColors > 256)
         {
-            return 1;
+            free(palette);
+            return -1;
         }
         
-        int rows, cols;
+        int n = 8*sizeof(numColors)-1-__builtin_clz(numColors); // n = log2(numColors)
+
+        int rows = 1<<(n/2);
+        int cols = 1<<(n-n/2);
         
-        if (numColors <= 1)
+        for (int y=0; y<height; y++)
         {
-            rows = 1;
-            cols = 1;
-        }
-        else if (numColors <= 2)
-        {
-            rows = 1;
-            cols = 2;
-        }
-        else if (numColors <= 4)
-        {
-            rows = 2;
-            cols = 2;
-        }
-        else if (numColors <= 8)
-        {
-            rows = 2;
-            cols = 4;
-        }
-        else if (numColors <= 16)
-        {
-            rows = 4;
-            cols = 4;
-        }
-        else if (numColors <= 32)
-        {
-            rows = 4;
-            cols = 8;
-        }
-        else if (numColors <= 64)
-        {
-            rows = 8;
-            cols = 8;
-        }
-        else if (numColors <= 128)
-        {
-            rows = 8;
-            cols = 16;
-        }
-        else if (numColors <= 256)
-        {
-            rows = 16;
-            cols = 16;
-        }
-        else
-        {
-            return 1;
-        }
-        
-        {
-            for (int y=0; y<height; y++)
+            for (int x=0; x<width; x++)
             {
-                for (int x=0; x<width; x++)
-                {
-                    int i = cols*(y*rows/height) + (x*cols/width);
-                    picture[width*y+x] = palette[i];
-                }
+                int i = cols*(y*rows/height) + (x*cols/width);
+                picture[width*y+x] = palette[i];
             }
         }
         
         free(palette);
-
-        return 0;
     }
     
-    return 1;
+    return 0;
 }
 
 
-CGImageRef iff_getImageRef(CFURLRef url)
+CGImageRef iff_createImage(CFURLRef url)
 {
 	CFDataRef data;
 	
@@ -458,8 +416,8 @@ CGImageRef iff_getImageRef(CFURLRef url)
 		return NULL;
 	}
 	
-	CGContextRef bitmapContext =
-    CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
+    CGContextRef bitmapContext =
+        CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
     
 	if (!bitmapContext)
 	{
