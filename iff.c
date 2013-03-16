@@ -65,6 +65,35 @@ int bmhd_getCompression(bmhd_t *bmhd)
 	return bmhd->compression;
 }
 
+int camg_getEHB(camg_t *camg)
+{
+    return !!(CFSwapInt32(camg->viewMode) & 0x0080);
+}
+
+int camg_getHAM(camg_t *camg)
+{
+    return !!(CFSwapInt32(camg->viewMode) & 0x0800);
+}
+
+int camg_getLace(camg_t *camg)
+{    
+    return !!(CFSwapInt32(camg->viewMode) & 0x0004);
+}
+
+int camg_getHires(camg_t *camg)
+{
+    return !!(CFSwapInt32(camg->viewMode) & 0x8000);
+}
+
+int camg_getSuper(camg_t *camg)
+{
+    return !!(CFSwapInt32(camg->viewMode) & 0x8020);
+}
+
+int camg_getSdbl(camg_t *camg)
+{
+    return !!(CFSwapInt32(camg->viewMode) & 0x0008);
+}
 
 int iff_mapChunks(const UInt8 *bytePtr, long length, chunkMap_t *ckmap)
 {
@@ -139,6 +168,17 @@ int cmap_unpack(chunkMap_t *ckmap, UInt32 *dest)
 		palette[i][2] = *src++;
 		palette[i][3] = *src++;
 	}
+    
+    if (ckmap->camg && camg_getEHB(ckmap->camg) && numColors <= 128)
+    {
+        for (int i=0; i<numColors; i++)
+        {
+            for (int j=0; j<4; j++)
+            {
+                palette[i+numColors][j] = palette[i][j]/2;
+            }
+        }
+    }
 	
 	return numColors;
 }
@@ -159,7 +199,7 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 	{
 		return -1;
 	}
-
+  
 	int height = bmhd_getHeight(bmhd);
 	int width = bmhd_getWidth(bmhd);
 	int depth = bmhd_getDepth(bmhd);
@@ -278,21 +318,24 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 	return 0;
 }
 
-int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
+CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
 {
     if (ckmap->bmhd && ckmap->body && ckmap->cmap)
     {
-        UInt8 *chunky = malloc(width*height);
+        int width = bmhd_getWidth(ckmap->bmhd);
+        int height = bmhd_getHeight(ckmap->bmhd);
+        
+        UInt8 *chunky = malloc(width*height*2);
 
         if (!chunky)
         {
-            return -1;
+            return CGSizeMake(0, 0);
         }
         
         if (body_unpack(ckmap, chunky) < 0)
         {
             free(chunky);
-            return -1;
+            return CGSizeMake(0, 0);
         }
         
         UInt32 *palette = malloc(256*4);
@@ -300,14 +343,14 @@ int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
         if (!palette)
         {
             free(chunky);
-            return -1;
+            return CGSizeMake(0, 0);
         }
         
         if (cmap_unpack(ckmap, palette) < 0)
         {
             free(chunky);
             free(palette);
-            return -1;
+            return CGSizeMake(0, 0);
         }
             
         for (int i=0; i<width*height; i++)
@@ -317,14 +360,47 @@ int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
         
         free(chunky);
         free(palette);
+
+        int doubleWidth = (ckmap->camg && camg_getLace(ckmap->camg) && !camg_getHires(ckmap->camg));
+        int doubleHeight = (ckmap->camg && !camg_getLace(ckmap->camg) && camg_getHires(ckmap->camg));
+ 
+        if (doubleWidth)
+        {
+            for (int y=height-1; y>=0; y--)
+            {
+                for (int x=width-1; x>=0; x--)
+                {
+                    picture[y*width*2+x*2+0] = picture[y*width+x];
+                    picture[y*width*2+x*2+1] = picture[y*width+x];
+                }
+            }
+            width *= 2;
+        }
+        else if (doubleHeight)
+        {
+            for (int x=width-1; x>=0; x--)
+            {
+                for (int y=height-1; y>=0; y--)
+                {
+                    picture[(y*2+0)*width+x] = picture[y*width+x];
+                    picture[(y*2+1)*width+x] = picture[y*width+x];
+                }
+            }
+            height *= 2;
+        }
+
+        return CGSizeMake(width, height);
     }
     else if (ckmap->cmap)
     {
+        int width = 256;
+        int height = 256;
+        
         UInt32 *palette = malloc(256*4);
 
         if (!palette)
         {
-            return -1;
+            return CGSizeMake(0, 0);
         }
         
         int numColors = cmap_unpack(ckmap, palette);
@@ -332,7 +408,7 @@ int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
         if (numColors <= 0 || numColors > 256)
         {
             free(palette);
-            return -1;
+            return CGSizeMake(0, 0);
         }
         
         int n = 8*sizeof(numColors)-1-__builtin_clz(numColors); // n = log2(numColors)
@@ -350,9 +426,44 @@ int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int width, int height)
         }
         
         free(palette);
+
+        return CGSizeMake(width, height);
     }
     
-    return 0;
+    return CGSizeMake(0, 0);
+}
+
+CGSize ilbm_getFinalSize(chunkMap_t *ckmap)
+{
+    CGSize size = CGSizeMake(0, 0);
+    
+    if (ckmap->bmhd && ckmap->body && ckmap->cmap)
+    {
+        size.width = bmhd_getWidth(ckmap->bmhd);
+        size.height = bmhd_getHeight(ckmap->bmhd);
+    }
+    else if (ckmap->cmap)
+    {
+        size.width = 256;
+        size.height = 256;
+    }
+    
+    if (ckmap->camg)
+    {
+        int lace = camg_getLace(ckmap->camg);
+        int hires = camg_getHires(ckmap->camg);
+        
+        if (hires && !lace)
+        {
+            size.height *= 2;
+        }
+        else if (lace && !hires)
+        {
+            size.width *= 2;
+        }
+    }
+    
+    return size;
 }
 
 
@@ -381,28 +492,11 @@ CGImageRef iff_createImage(CFURLRef url)
         return NULL;
     }
     
-    int width, height;
+    CGSize size = ilbm_getFinalSize(&ckmap);
     
-    if (ckmap.bmhd && ckmap.body && ckmap.cmap)
-    {
-        width = bmhd_getWidth(ckmap.bmhd);
-        height = bmhd_getHeight(ckmap.bmhd);
-    }
-    else if (ckmap.cmap)
-    {
-        width = 256;
-        height = 256;
-    }
-    else
-    {
-        return NULL;
-    }
+	UInt32 *picture = malloc(4*size.width*size.height);
     
-	int width2 = (width+1)&-2;
-	
-	UInt32 *picture = malloc(4*width*height);
-    
-    errorCode = ilbm_render(&ckmap, picture, width, height);
+    CGSize size2 = ilbm_render(&ckmap, picture);
     
     if (errorCode)
     {
@@ -417,7 +511,7 @@ CGImageRef iff_createImage(CFURLRef url)
 	}
 	
     CGContextRef bitmapContext =
-        CGBitmapContextCreate(picture, width, height, 8, 4*width2, colorSpace, kCGImageAlphaNoneSkipFirst);
+        CGBitmapContextCreate(picture, size2.width, size2.height, 8, 4*size2.width, colorSpace, kCGImageAlphaNoneSkipFirst);
     
 	if (!bitmapContext)
 	{

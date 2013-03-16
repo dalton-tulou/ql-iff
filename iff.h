@@ -54,8 +54,8 @@ body_t;
 
 typedef struct
 {
-	header_t	header;
-	uint8_t data;
+	header_t    header;
+	uint32_t    viewMode;
 }
 camg_t;
 
@@ -77,8 +77,6 @@ int bmhd_getCompression(bmhd_t *bmhd);
 int iff_mapChunks(const UInt8 *, long, chunkMap_t *);
 int body_unpack(chunkMap_t *, UInt8 *);
 int cmap_unpack(chunkMap_t *, UInt32 *);
-
-int ilbm_render(chunkMap_t *ckmap, UInt32 *picture, int with, int height);
 
 CGImageRef iff_createImage(CFURLRef url);
 
