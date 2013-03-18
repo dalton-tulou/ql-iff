@@ -398,6 +398,49 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
                 picture[i] = (b<<24)+(g<<16)+(r<<8);
             }
         }
+        else if (ckmap->camg && camg_getHAM(ckmap->camg) && bmhd_getDepth(ckmap->bmhd) == 8)
+        {
+            // HAM8
+            
+            int r=0, g=0, b=0;
+            
+            for (int i=0; i<width*height; i++)
+            {
+                int h = chunky[i] >> 6;
+                int l = chunky[i] & 63;
+                
+                switch (h & 3)
+                {
+                    case 0:
+                        
+                        r = (palette[l] >>  8) & 255;
+                        g = (palette[l] >> 16) & 255;
+                        b = (palette[l] >> 24) & 255;
+                        
+                        break;
+                        
+                    case 2:
+                        
+                        r = l << 2;
+                        
+                        break;
+                        
+                    case 3:
+                        
+                        g = l << 2;
+                        
+                        break;
+                        
+                    case 1:
+                        
+                        b = l << 2;
+                        
+                        break;
+                }
+                
+                picture[i] = (b<<24)+(g<<16)+(r<<8);
+            }
+        }
         else
         {
             for (int i=0; i<width*height; i++)
