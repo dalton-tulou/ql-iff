@@ -354,10 +354,56 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             free(palette);
             return CGSizeMake(0, 0);
         }
-            
-        for (int i=0; i<width*height; i++)
+
+        if (ckmap->camg && camg_getHAM(ckmap->camg) && bmhd_getDepth(ckmap->bmhd) == 6)
         {
-            picture[i] = palette[chunky[i]];
+            // HAM6
+            
+            int r=0, g=0, b=0;
+            
+            for (int i=0; i<width*height; i++)
+            {
+                int h = chunky[i] >> 4;
+                int l = chunky[i] & 15;
+                
+                switch (h & 3)
+                {
+                    case 0:
+                        
+                        r = (palette[l] >>  8) & 255;
+                        g = (palette[l] >> 16) & 255;
+                        b = (palette[l] >> 24) & 255;
+                        
+                        break;
+                        
+                    case 2:
+                        
+                        r = l << 4;
+                        
+                        break;
+                        
+                    case 3:
+                        
+                        g = l << 4;
+                        
+                        break;
+                        
+                    case 1:
+                        
+                        b = l << 4;
+                        
+                        break;
+                }
+                
+                picture[i] = (b<<24)+(g<<16)+(r<<8);
+            }
+        }
+        else
+        {
+            for (int i=0; i<width*height; i++)
+            {
+                picture[i] = palette[chunky[i]];
+            }
         }
         
         free(chunky);
