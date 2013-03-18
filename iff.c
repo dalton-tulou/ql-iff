@@ -326,6 +326,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
     {
         int width = bmhd_getWidth(ckmap->bmhd);
         int height = bmhd_getHeight(ckmap->bmhd);
+        int depth = bmhd_getDepth(ckmap->bmhd);
         
         UInt8 *chunky = malloc(width*height*8);
 
@@ -355,86 +356,35 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             return CGSizeMake(0, 0);
         }
 
-        if (ckmap->camg && camg_getHAM(ckmap->camg) && bmhd_getDepth(ckmap->bmhd) == 6)
+        if (ckmap->camg && camg_getHAM(ckmap->camg) && depth >= 5)
         {
-            // HAM6
+            // HAM
             
             int r=0, g=0, b=0;
             
             for (int i=0; i<width*height; i++)
             {
-                int h = chunky[i] >> 4;
-                int l = chunky[i] & 15;
+                int hi = chunky[i] >> (depth-2);
+                int lo = chunky[i] & (255 >> (10-depth));
                 
-                switch (h & 3)
+                switch (hi & 3)
                 {
                     case 0:
-                        
-                        r = (palette[l] >>  8) & 255;
-                        g = (palette[l] >> 16) & 255;
-                        b = (palette[l] >> 24) & 255;
-                        
+                        r = (palette[lo] >>  8) & 255;
+                        g = (palette[lo] >> 16) & 255;
+                        b = (palette[lo] >> 24) & 255;
                         break;
                         
                     case 2:
-                        
-                        r = l << 4;
-                        
+                        r = lo << (10-depth);
                         break;
                         
                     case 3:
-                        
-                        g = l << 4;
-                        
+                        g = lo << (10-depth);
                         break;
                         
                     case 1:
-                        
-                        b = l << 4;
-                        
-                        break;
-                }
-                
-                picture[i] = (b<<24)+(g<<16)+(r<<8);
-            }
-        }
-        else if (ckmap->camg && camg_getHAM(ckmap->camg) && bmhd_getDepth(ckmap->bmhd) == 8)
-        {
-            // HAM8
-            
-            int r=0, g=0, b=0;
-            
-            for (int i=0; i<width*height; i++)
-            {
-                int h = chunky[i] >> 6;
-                int l = chunky[i] & 63;
-                
-                switch (h & 3)
-                {
-                    case 0:
-                        
-                        r = (palette[l] >>  8) & 255;
-                        g = (palette[l] >> 16) & 255;
-                        b = (palette[l] >> 24) & 255;
-                        
-                        break;
-                        
-                    case 2:
-                        
-                        r = l << 2;
-                        
-                        break;
-                        
-                    case 3:
-                        
-                        g = l << 2;
-                        
-                        break;
-                        
-                    case 1:
-                        
-                        b = l << 2;
-                        
+                        b = lo << (10-depth);
                         break;
                 }
                 
@@ -443,6 +393,8 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         }
         else
         {
+            // normal indexed colors
+            
             for (int i=0; i<width*height; i++)
             {
                 picture[i] = palette[chunky[i]];
