@@ -87,10 +87,10 @@ int camg_getHires(camg_t *camg)
 
 int camg_getSuper(camg_t *camg)
 {
-    return !!(CFSwapInt32(camg->viewMode) & 0x8020);
+    return (CFSwapInt32(camg->viewMode) & 0x8020) == 0x8020;
 }
 
-int camg_getSdbl(camg_t *camg)
+int camg_getSDbl(camg_t *camg)
 {
     return !!(CFSwapInt32(camg->viewMode) & 0x0008);
 }
@@ -169,7 +169,9 @@ int cmap_unpack(chunkMap_t *ckmap, UInt32 *dest)
 		palette[i][3] = *src++;
 	}
     
-    if (ckmap->camg && camg_getEHB(ckmap->camg) && numColors <= 128)
+    if (ckmap->camg && camg_getEHB(ckmap->camg)
+        && ckmap->bmhd && bmhd_getDepth(ckmap->bmhd) == 6
+        && numColors <= 32)
     {
         for (int i=0; i<numColors; i++)
         {
@@ -325,7 +327,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         int width = bmhd_getWidth(ckmap->bmhd);
         int height = bmhd_getHeight(ckmap->bmhd);
         
-        UInt8 *chunky = malloc(width*height*2);
+        UInt8 *chunky = malloc(width*height*8);
 
         if (!chunky)
         {
@@ -361,6 +363,47 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         free(chunky);
         free(palette);
 
+        int aspect = 0;
+        
+        if (ckmap->camg)
+        {
+            aspect += camg_getHires(ckmap->camg);
+            aspect += camg_getSuper(ckmap->camg);
+            aspect += camg_getSDbl(ckmap->camg);
+            aspect -= camg_getLace(ckmap->camg);
+        }
+        
+        if (aspect < 0)
+        {
+            aspect = -aspect;
+            
+            for (int y=height-1; y>=0; y--)
+            {
+                for (int x=width-1; x>=0; x--)
+                {
+                    for (int z=0; z<(1<<aspect); z++)
+                    {
+                        picture[((y*width+x)<<aspect)+z] = picture[y*width+x];
+                    }
+                }
+            }
+            width <<= aspect;
+        }
+        else if (aspect > 0)
+        {
+            for (int x=width-1; x>=0; x--)
+            {
+                for (int y=height-1; y>=0; y--)
+                {
+                    for (int z=0; z<(1<<aspect); z++)
+                    {
+                        picture[((y<<aspect)+z)*width+x] = picture[y*width+x];
+                    }
+                }
+            }
+            height <<= aspect;
+        }
+/*
         int doubleWidth = (ckmap->camg && camg_getLace(ckmap->camg) && !camg_getHires(ckmap->camg));
         int doubleHeight = (ckmap->camg && !camg_getLace(ckmap->camg) && camg_getHires(ckmap->camg));
  
@@ -388,7 +431,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             }
             height *= 2;
         }
-
+*/
         return CGSizeMake(width, height);
     }
     else if (ckmap->cmap)
