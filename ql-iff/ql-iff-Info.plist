@@ -57,6 +57,34 @@
 	<real>800</real>
 	<key>QLSupportsConcurrentRequests</key>
 	<false/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.image</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>com.ea.iff-ilbm</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/x-iff</string>
+					<string>image/ilbm</string>
+					<string>image/x-ilbm</string>
+				</array>
+				<key>public.filename-extension</key>
+				<array>
+					<string>iff</string>
+					<string>ilbm</string>
+					<string>lbm</string>
+				</array>
+			</dict>
+			<key>UTTypeDescription</key>
+			<string>IFF ILBM</string>
+		</dict>
+	</array>
 	<key>QLThumbnailMinimumSize</key>
 	<real>17</real>
 </dict>
