@@ -65,6 +65,16 @@ int bmhd_getCompression(bmhd_t *bmhd)
 	return bmhd->compression;
 }
 
+static int bmhd_getMasking(bmhd_t *bmhd)
+{
+    return bmhd->masking;
+}
+
+static int bmhd_getTransparentColor(bmhd_t *bmhd)
+{
+    return CFSwapInt16(bmhd->transparentColor);
+}
+
 int camg_getEHB(camg_t *camg)
 {
     return !!(CFSwapInt32(camg->viewMode) & 0x0080);
@@ -185,6 +195,36 @@ int cmap_unpack(chunkMap_t *ckmap, UInt32 *dest)
 	return numColors;
 }
 
+static SInt8 *byterun_unpack(SInt8 *src, UInt8 *dest, int numBytes)
+{
+    UInt8 *rowEnd = dest+numBytes;
+    
+    while (dest < rowEnd)
+    {
+        int x = *src++;
+        
+        if (x >= 0)
+        {
+            while (x-- >= 0)
+            {
+                *dest++ = *src++;
+            }
+        }
+        else if (x != -128) // rle
+        {
+            int y = *src++;
+            
+            while (x++ <= 0)
+            {
+                *dest++ = y;
+            }
+        }
+    }					
+    assert(dest == rowEnd);
+    
+    return src;
+}
+
 int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 {
 	bmhd_t *bmhd = ckmap->bmhd;
@@ -224,37 +264,14 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 			{
 				if (comp)
 				{
-					UInt8 *rowEnd = dest+cols;
-					
-					while (dest < rowEnd)
-					{
-						int x = *src++;
-						
-						if (x >= 0)
-						{
-							while (x-- >= 0)
-							{
-								*dest++ = *src++;
-							}
-						}
-						else if (x != -128) // rle
-						{
-							int y = *src++;
-							
-							while (x++ <= 0)
-							{
-								*dest++ = y;
-							}
-						}
-					}					
-					assert(dest == rowEnd);
+                    src = byterun_unpack(src, dest, cols);
 				}
 				else
 				{
 					memcpy(dest, src, cols);
 					src += cols;
-					dest += cols;
 				}
+                dest += cols;
 			}
 		}
         
@@ -283,36 +300,14 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 		UInt8 *dest = chunky;
 		SInt8 *src = header_getData(&body->header);	
 		
-			if (comp)
-			{
-				UInt8 *dataEnd = dest+height*width;
-				
-				while (dest < dataEnd)
-				{
-					int x = *src++;
-					
-					if (x >= 0)
-					{
-						while (x-- >= 0)
-						{
-							*dest++ = *src++;
-						}
-					}
-					else if (x != 128) // rle
-					{
-						int y = *src++;
-						
-						while (x++ <= 0)
-						{
-							*dest++ = y;
-						}
-					}
-				}
-			}
-			else
-			{
-				memcpy(dest, src, height*width);
-			}
+        if (comp)
+		{
+            src = byterun_unpack(src, dest, height*width);
+		}
+        else
+        {
+			memcpy(dest, src, height*width);
+		}
 	}
 	
 	free(planar);
@@ -388,16 +383,27 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
                         break;
                 }
                 
-                picture[i] = (b<<24)+(g<<16)+(r<<8);
+                picture[i] = (b<<24)+(g<<16)+(r<<8)+255;
             }
         }
         else
         {
             // normal indexed colors
             
+            int tc = bmhd_getMasking(ckmap->bmhd) == 2 ? bmhd_getTransparentColor(ckmap->bmhd) : -1;
+            
             for (int i=0; i<width*height; i++)
             {
                 picture[i] = palette[chunky[i]];
+                
+                if (chunky[i] == tc)
+                {
+                    picture[i] &= 0xffffff00;
+                }
+                else
+                {
+                    picture[i] |= 0x000000ff;
+                }
             }
         }
         
@@ -444,35 +450,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             }
             height <<= aspect;
         }
-/*
-        int doubleWidth = (ckmap->camg && camg_getLace(ckmap->camg) && !camg_getHires(ckmap->camg));
-        int doubleHeight = (ckmap->camg && !camg_getLace(ckmap->camg) && camg_getHires(ckmap->camg));
- 
-        if (doubleWidth)
-        {
-            for (int y=height-1; y>=0; y--)
-            {
-                for (int x=width-1; x>=0; x--)
-                {
-                    picture[y*width*2+x*2+0] = picture[y*width+x];
-                    picture[y*width*2+x*2+1] = picture[y*width+x];
-                }
-            }
-            width *= 2;
-        }
-        else if (doubleHeight)
-        {
-            for (int x=width-1; x>=0; x--)
-            {
-                for (int y=height-1; y>=0; y--)
-                {
-                    picture[(y*2+0)*width+x] = picture[y*width+x];
-                    picture[(y*2+1)*width+x] = picture[y*width+x];
-                }
-            }
-            height *= 2;
-        }
-*/
+        
         return CGSizeMake(width, height);
     }
     else if (ckmap->cmap)
@@ -505,7 +483,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             for (int x=0; x<width; x++)
             {
                 int i = cols*(y*rows/height) + (x*cols/width);
-                picture[width*y+x] = palette[i];
+                picture[width*y+x] = palette[i] | 255;
             }
         }
         
@@ -595,7 +573,11 @@ CGImageRef iff_createImage(CFURLRef url)
 	}
 	
     CGContextRef bitmapContext =
-        CGBitmapContextCreate(picture, size2.width, size2.height, 8, 4*size2.width, colorSpace, kCGImageAlphaNoneSkipFirst);
+        CGBitmapContextCreate(picture, size2.width, size2.height, 8, 4*size2.width, colorSpace,
+//        kCGImageAlphaNoneSkipFirst
+//            kCGImageAlphaFirst
+            kCGImageAlphaPremultipliedFirst
+            );
     
 	if (!bitmapContext)
 	{
