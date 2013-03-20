@@ -315,7 +315,52 @@ int body_unpack(chunkMap_t *ckmap, UInt8 *chunky)
 	return 0;
 }
 
-CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
+int camg_getPixelAspect(camg_t *camg)
+{
+    int aspect = 0;
+    
+    if (camg)
+    {
+        aspect += camg_getHires(camg);
+        aspect += camg_getSuper(camg);
+        aspect += camg_getSDbl(camg);
+        aspect -= camg_getLace(camg);
+    }
+    
+    return aspect;
+}
+
+CGSize ilbm_getFinalSize(chunkMap_t *ckmap)
+{
+    int w=0, h=0;
+    
+    if (ckmap->bmhd && ckmap->body && ckmap->cmap)
+    {
+        w = bmhd_getWidth(ckmap->bmhd);
+        h = bmhd_getHeight(ckmap->bmhd);
+        
+        int aspect = camg_getPixelAspect(ckmap->camg);
+        
+        if (aspect < 0)
+        {
+            w <<= -aspect;
+        }
+        else if (aspect > 0)
+        {
+            h <<= aspect;
+        }
+    }
+    else if (ckmap->cmap)
+    {
+        w = 256;
+        h = 256;
+    }
+    
+    return CGSizeMake(w, h);
+}
+
+
+int ilbm_decode(chunkMap_t *ckmap, UInt32 *picture)
 {
     if (ckmap->bmhd && ckmap->body && ckmap->cmap)
     {
@@ -327,13 +372,13 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
 
         if (!chunky)
         {
-            return CGSizeMake(0, 0);
+            return -1;
         }
         
         if (body_unpack(ckmap, chunky) < 0)
         {
             free(chunky);
-            return CGSizeMake(0, 0);
+            return -1;
         }
         
         UInt32 *palette = malloc(256*4);
@@ -341,14 +386,14 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         if (!palette)
         {
             free(chunky);
-            return CGSizeMake(0, 0);
+            return -1;
         }
         
         if (cmap_unpack(ckmap, palette) < 0)
         {
             free(chunky);
             free(palette);
-            return CGSizeMake(0, 0);
+            return -1;
         }
 
         if (ckmap->camg && camg_getHAM(ckmap->camg) && depth >= 5)
@@ -410,16 +455,8 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         free(chunky);
         free(palette);
 
-        int aspect = 0;
-        
-        if (ckmap->camg)
-        {
-            aspect += camg_getHires(ckmap->camg);
-            aspect += camg_getSuper(ckmap->camg);
-            aspect += camg_getSDbl(ckmap->camg);
-            aspect -= camg_getLace(ckmap->camg);
-        }
-        
+        int aspect = camg_getPixelAspect(ckmap->camg);
+
         if (aspect < 0)
         {
             aspect = -aspect;
@@ -451,7 +488,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
             height <<= aspect;
         }
         
-        return CGSizeMake(width, height);
+        return 0;
     }
     else if (ckmap->cmap)
     {
@@ -462,7 +499,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
 
         if (!palette)
         {
-            return CGSizeMake(0, 0);
+            return -1;
         }
         
         int numColors = cmap_unpack(ckmap, palette);
@@ -470,7 +507,7 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         if (numColors <= 0 || numColors > 256)
         {
             free(palette);
-            return CGSizeMake(0, 0);
+            return -1;
         }
         
         int n = 8*sizeof(numColors)-1-__builtin_clz(numColors); // n = log2(numColors)
@@ -488,48 +525,21 @@ CGSize ilbm_render(chunkMap_t *ckmap, UInt32 *picture)
         }
         
         free(palette);
-
-        return CGSizeMake(width, height);
-    }
-    
-    return CGSizeMake(0, 0);
-}
-
-CGSize ilbm_getFinalSize(chunkMap_t *ckmap)
-{
-    CGSize size = CGSizeMake(0, 0);
-    
-    if (ckmap->bmhd && ckmap->body && ckmap->cmap)
-    {
-        size.width = bmhd_getWidth(ckmap->bmhd);
-        size.height = bmhd_getHeight(ckmap->bmhd);
-    }
-    else if (ckmap->cmap)
-    {
-        size.width = 256;
-        size.height = 256;
-    }
-    
-    if (ckmap->camg)
-    {
-        int lace = camg_getLace(ckmap->camg);
-        int hires = camg_getHires(ckmap->camg);
         
-        if (hires && !lace)
-        {
-            size.height *= 2;
-        }
-        else if (lace && !hires)
-        {
-            size.width *= 2;
-        }
+        return 0;
     }
     
-    return size;
+    return -1;
+}
+
+CGColorRef ilbm_getTransparentColorRGB(chunkMap_t *ckmap, UInt8 (*palette)[4])
+{
+    int i = bmhd_getMasking(ckmap->bmhd) == 2 ? bmhd_getTransparentColor(ckmap->bmhd) : 0;
+    return CGColorCreateGenericRGB(palette[i][1]/255.0, palette[i][2]/255.0, palette[i][3]/255.0, 1.0);
 }
 
 
-CGImageRef iff_createImage(CFURLRef url)
+CGImageRef iff_createImage(CFURLRef url, bool withAlpha)
 {
 	CFDataRef data;
 	
@@ -537,10 +547,7 @@ CGImageRef iff_createImage(CFURLRef url)
 	
 	Boolean success = CFURLCreateDataAndPropertiesFromResource(NULL, url, &data, NULL, NULL, &errorCode);
 	
-	if (!success)
-	{
-		return NULL;
-	}
+	if (!success) return NULL;
 	
 	CFIndex length = CFDataGetLength(data);
     const UInt8 *bytePtr = CFDataGetBytePtr(data);
@@ -549,46 +556,32 @@ CGImageRef iff_createImage(CFURLRef url)
 	
 	errorCode = iff_mapChunks(bytePtr, length, &ckmap);
 	
-    if (errorCode)
-    {
-        return NULL;
-    }
+    if (errorCode) return NULL;
     
     CGSize size = ilbm_getFinalSize(&ckmap);
     
 	UInt32 *picture = malloc(4*size.width*size.height);
     
-    CGSize size2 = ilbm_render(&ckmap, picture);
+    errorCode = ilbm_decode(&ckmap, picture);
     
-    if (errorCode)
-    {
-        return NULL;
-    }
-    
+    if (errorCode) return NULL;
+
 	CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
     
-	if (!colorSpace)
-	{
-		return NULL;
-	}
+	if (!colorSpace) return NULL;
 	
-    CGContextRef bitmapContext =
-        CGBitmapContextCreate(picture, size2.width, size2.height, 8, 4*size2.width, colorSpace,
-//        kCGImageAlphaNoneSkipFirst
-//            kCGImageAlphaFirst
-            kCGImageAlphaPremultipliedFirst
-            );
+    CGContextRef context = CGBitmapContextCreate(picture, size.width, size.height, 8, 4*size.width, colorSpace, withAlpha ? kCGImageAlphaPremultipliedFirst : kCGImageAlphaNoneSkipFirst);
     
-	if (!bitmapContext)
-	{
-		return NULL;
-	}
+	if (!context) return NULL;
 	
 	CGColorSpaceRelease(colorSpace);
 	
-	CGImageRef image = CGBitmapContextCreateImage(bitmapContext);
+    CGColorRef color = CGColorCreateGenericRGB(1.0, 0.0, 1.0, 1.0);
+    CGContextSetFillColorWithColor(context, color);
     
-    CFRelease(bitmapContext);
+	CGImageRef image = CGBitmapContextCreateImage(context);
+    
+    CFRelease(context);
 	free(picture);
 
     return image;

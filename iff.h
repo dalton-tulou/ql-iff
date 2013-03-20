@@ -69,14 +69,5 @@ typedef struct
 }
 chunkMap_t;
 
-int bmhd_getWidth(bmhd_t *bmhd);
-int bmhd_getHeight(bmhd_t *bmhd);
-int bmhd_getDepth(bmhd_t *bmhd);
-int bmhd_getCompression(bmhd_t *bmhd);
-
-int iff_mapChunks(const UInt8 *, long, chunkMap_t *);
-int body_unpack(chunkMap_t *, UInt8 *);
-int cmap_unpack(chunkMap_t *, UInt32 *);
-
-CGImageRef iff_createImage(CFURLRef url);
+CGImageRef iff_createImage(CFURLRef url, bool withAlpha);
 

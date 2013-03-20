@@ -14,7 +14,7 @@ void CancelPreviewGeneration(void *thisInterface, QLPreviewRequestRef preview);
 
 OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview, CFURLRef url, CFStringRef contentTypeUTI, CFDictionaryRef options)
 {
-    CGImageRef image = iff_createImage(url);
+    CGImageRef image = iff_createImage(url, false);
     
     if (!image)
     {
@@ -31,7 +31,11 @@ OSStatus GeneratePreviewForURL(void *thisInterface, QLPreviewRequestRef preview,
 		return noErr;
 	}
     
-	CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);    
+//    CGColorRef color = CGColorCreateGenericRGB(0.0, 1.0, 0.0, 1.0);
+//    CGContextSetFillColorWithColor(context, color);    
+//    CGContextFillRect(context, CGRectMake(0, 0, width, height));
+    
+	CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
     
     CGImageRelease(image);
     
