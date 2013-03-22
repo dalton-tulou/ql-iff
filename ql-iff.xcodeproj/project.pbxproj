@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		635477E116F127580032D294 /* iff.qlgenerator in CopyFiles */ = {isa = PBXBuildFile; fileRef = 639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */; };
+		637175B516FD06AD0016726E /* readme.txt in Resources */ = {isa = PBXBuildFile; fileRef = 637175B416FD06AD0016726E /* readme.txt */; };
 		639C91D816F0E8D0008C3BF1 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91D716F0E8D0008C3BF1 /* QuickLook.framework */; };
 		639C91DA16F0E8D0008C3BF1 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91D916F0E8D0008C3BF1 /* ApplicationServices.framework */; };
 		639C91DC16F0E8D0008C3BF1 /* CoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 639C91DB16F0E8D0008C3BF1 /* CoreServices.framework */; };
@@ -34,6 +35,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		637175B416FD06AD0016726E /* readme.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = readme.txt; sourceTree = SOURCE_ROOT; };
 		639C91D416F0E8D0008C3BF1 /* iff.qlgenerator */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = iff.qlgenerator; sourceTree = BUILT_PRODUCTS_DIR; };
 		639C91D716F0E8D0008C3BF1 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		639C91D916F0E8D0008C3BF1 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
@@ -101,6 +103,7 @@
 				639C91E716F0E8D0008C3BF1 /* GeneratePreviewForURL.c */,
 				639C91E916F0E8D0008C3BF1 /* main.c */,
 				639C91E016F0E8D0008C3BF1 /* Supporting Files */,
+				637175B416FD06AD0016726E /* readme.txt */,
 			);
 			path = "ql-iff";
 			sourceTree = "<group>";
@@ -181,6 +184,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				639C91E416F0E8D0008C3BF1 /* InfoPlist.strings in Resources */,
+				637175B516FD06AD0016726E /* readme.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
