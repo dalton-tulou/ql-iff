@@ -19,7 +19,7 @@ Install:
 * For one user, copy iff.qlgenerator to ~/Library/QuickLook/
 * For all users, copy iff.qlgenerator to /Library/QuickLook/
 
-Download latest version from [https://github.com/dalton-tulou/ql-iff/releases/download/v1.0-beta/ql-iff.zip](ql-iff.zip)
+Download latest version from [https://github.com/dalton-tulou/ql-iff/releases/download/v1.0-beta/ql-iff.zip](https://github.com/dalton-tulou/ql-iff/releases/download/v1.0-beta/ql-iff.zip)
 
 Source code available at https://github.com/dalton-tulou/ql-iff
 
